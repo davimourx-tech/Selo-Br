@@ -37,7 +37,10 @@ document.getElementById("brandLink").href="index.html?c="+TOKEN;
 const DOW=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const MONTHS=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 function postLink(id){ return `post.html?c=${TOKEN}&p=${PID}&post=${id}`; }
-function thumb(p){ return `<span class="agenda-thumb cover grad ${p.art}"><span class="art-noise"></span></span>`; }
+function thumb(p){
+  if(p.cover){ const cv=U.coverAttrs(p.cover); return `<span class="agenda-thumb ${cv.cls}" style="${cv.style}"></span>`; }
+  const t=TYPE[p.type]; return `<span class="agenda-thumb noimg">${U.icon(t.icon)}</span>`;
+}
 function dateBlock(y,m,d){ const wd=DOW[new Date(y,m-1,d).getDay()];
   return `<div class="agenda-date"><div class="num">${String(d).padStart(2,'0')}</div><div class="mo">${MONTHS[m-1].slice(0,3)} · ${wd}</div></div>`; }
 function agendaRow(p, dateHtml){

@@ -321,6 +321,19 @@ select.select-bare{-webkit-appearance:none;appearance:none;background-image:none
   background:rgba(255,255,255,.16);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.3);
   display:grid;place-items:center;cursor:pointer;transition:.2s}
 .play:hover{background:rgba(255,255,255,.28);transform:scale(1.05)}
+
+/* botão animado "abrir no Drive" (mobile) + placeholder sem imagem */
+.openmedia{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  text-align:center;text-decoration:none;color:var(--text);min-height:230px;padding:40px 22px;
+  border-radius:var(--r-xl);border:1px solid var(--line-2);
+  background:radial-gradient(circle at 50% 32%, rgba(255,255,255,.06), transparent 60%), var(--surface);
+  transition:transform .15s var(--ease)}
+.openmedia:active{transform:scale(.99)}
+.openmedia .circle{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;
+  background:#fff;color:#000;animation:pulseBtn 2.1s var(--ease) infinite}
+.openmedia .circle svg{width:30px;height:30px;stroke-width:1.9}
+@keyframes pulseBtn{0%{box-shadow:0 0 0 0 rgba(255,255,255,.32)}70%{box-shadow:0 0 0 20px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+.noimg{background:var(--surface-2);color:var(--text-3);display:grid;place-items:center}
 .caption-box{white-space:pre-wrap;line-height:1.65;color:var(--text)}
 .note-box{background:var(--amber-soft);border:1px solid rgba(255,176,32,.3);border-radius:var(--r);padding:14px 16px;color:#ffd98a}
 .kv{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line)}

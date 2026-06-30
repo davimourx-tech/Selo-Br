@@ -297,7 +297,7 @@ function genToken(){ return Math.random().toString(36).slice(2,8); }
 const PALETTE = ["art-1","art-2","art-3","art-4","art-5","art-6"];
 
 function postFromDb(x){
-  const o={ id:x.id, title:x.title, type:x.type, art:x.art||'art-1', embed:x.embed||'',
+  const o={ id:x.id, title:x.title, type:x.type, art:x.art||'art-1', embed:x.embed||'', cover:x.cover||'',
             caption:x.caption||'', note:x.note||'', status:x.status||'pendente', date:x.pub_date||'',
             briefing:x.briefing||'', roteiro:x.roteiro||'', refs:x.refs||'', palpite:x.palpite||'' };
   if(x.slides) o.slides=x.slides;
@@ -305,7 +305,7 @@ function postFromDb(x){
   return o;
 }
 function postToDb(p, projectId){
-  return { id:p.id, project_id:projectId, title:p.title||'', type:p.type, art:p.art||'art-1',
+  return { id:p.id, project_id:projectId, title:p.title||'', type:p.type, art:p.art||'art-1', cover:p.cover||'',
            embed:p.embed||'', caption:p.caption||'', note:p.note||'', status:p.status||'pendente',
            pub_date:p.date||null, slides:p.slides||0,
            briefing:p.briefing||'', roteiro:p.roteiro||'', refs:p.refs||'', palpite:p.palpite||'',
@@ -393,6 +393,18 @@ const Store = {
   async setProjectCover(cid,pid,cover){ Data.project(cid,pid).cover=cover;
     if(this.sb) await this.sb.from('projects').update({cover}).eq('id',pid); },
 
+  /* upload de vídeo -> Supabase Storage (bucket 'videos') -> retorna URL pública */
+  async uploadVideo(file){
+    if(!this.sb){ U.toast('Configure o Supabase para enviar vídeos'); return null; }
+    if(file.size > 50*1024*1024){ U.toast('Vídeo acima de 50MB — comprima ou aumente o limite no Supabase'); return null; }
+    const ext=(file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp4';
+    const path='video-'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'.'+ext;
+    const up=await this.sb.storage.from('videos').upload(path, file, { upsert:true, contentType:file.type||'video/mp4' });
+    if(up.error){ console.error(up.error); U.toast('Erro ao enviar — confira o bucket "videos"'); return null; }
+    const { data } = this.sb.storage.from('videos').getPublicUrl(path);
+    return data.publicUrl;
+  },
+
   /* upload de imagem de capa -> Supabase Storage (bucket 'capas') -> retorna URL pública */
   async uploadCover(file){
     if(!this.sb){ U.toast('Configure o Supabase para enviar imagens'); return null; }
@@ -479,14 +491,27 @@ U.daysLeft = function(iso){ if(!iso) return null;
   return Math.ceil((end-now)/(1000*60*60*24));
 };
 
+/* detecta arquivo de vídeo direto (player nativo) vs link de embed (iframe) */
+U.isVideoFile = function(url){ return /\.(mp4|mov|webm|m4v|ogg)(\?|#|$)/i.test(url||''); };
+
 /* normaliza link do Google Drive para o formato embutível (/preview) */
 U.embedUrl = function(url){
   if(!url) return url;
+  // Google Drive
   let m = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
   if(m) return 'https://drive.google.com/file/d/'+m[1]+'/preview';
+  // Pasta do Drive (carrossel) -> grade incorporável
+  let fo = url.match(/drive\.google\.com\/drive\/folders\/([^/?#]+)/);
+  if(fo) return 'https://drive.google.com/embeddedfolderview?id='+fo[1]+'#grid';
   m = url.match(/drive\.google\.com\/open\?id=([^&]+)/) || url.match(/[?&]id=([^&]+)/);
   if(m && /drive\.google/.test(url)) return 'https://drive.google.com/file/d/'+m[1]+'/preview';
-  return url;  // YouTube, Vimeo ou outro embed: usa como está
+  // YouTube (watch, shorts, youtu.be) -> player incorporável e limpo
+  const y = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+  if(y) return 'https://www.youtube.com/embed/'+y[1]+'?rel=0&modestbranding=1&playsinline=1';
+  // Vimeo
+  const v = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if(v) return 'https://player.vimeo.com/video/'+v[1];
+  return url;  // outro embed: usa como está
 };
 
 /* capa de projeto: art-X (preset) ou URL de imagem */

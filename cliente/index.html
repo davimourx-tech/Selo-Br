@@ -30,7 +30,7 @@ function projectCard(p){
   const st=STATUS.project[p.status];
   const pr=Data.projectProgress(p);
   const clickable = p.status!=="breve";
-  const cv=U.coverAttrs(p.cover || (p.posts[0]?p.posts[0].art:'art-6'));
+  const cv=U.coverAttrs(p.cover || (p.posts[0]&&p.posts[0].cover) || 'art-6');
   const inner=`
     <div class="${cv.cls} ratio-16-9" style="border-radius:var(--r-lg);${cv.style}">
       <div class="art-noise"></div>

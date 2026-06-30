@@ -48,23 +48,45 @@ document.getElementById("x1").innerHTML=U.icon("x");
 
 const isVideo=(t)=>t==="reel-9-16"||t==="reel-16-9";
 
-function mediaBlock(){
+function coverImageBlock(){
+  const t=TYPE[post.type], cv=U.coverAttrs(post.cover);
+  return `<div class="detail-media ${cv.cls} ${t.ratio}" style="${cv.style}"><div class="art-noise"></div></div>`;
+}
+function neutralBlock(){
   const t=TYPE[post.type];
-  // Etapa 2: se houver embed do Drive, troca o bloco de arte por <iframe src=post.embed>
+  return `<div class="detail-media ${t.ratio} noimg"><div class="col center" style="gap:10px">
+      <span style="opacity:.6">${U.icon(t.icon)}</span><span class="meta-sm">${t.label}</span></div></div>`;
+}
+function openDriveButton(){
+  const t=post.type;
+  let label, ic;
+  if(isVideo(t)){ label="Assistir o vídeo no Drive"; ic="play"; }
+  else if(t==="carrossel"){ label="Abrir o carrossel no Drive"; ic="layers"; }
+  else if(t==="foto"){ label="Ver a foto no Drive"; ic="image"; }
+  else { label="Abrir no Drive"; ic="film"; }
+  return `<a class="openmedia" href="${post.embed}" target="_blank" rel="noopener">
+      <span class="circle">${U.icon(ic)}</span>
+      <span><strong style="font-size:17px;display:block;margin-bottom:3px">${label}</strong>
+      <span class="meta-sm">Toque para abrir no Google Drive</span></span>
+    </a>`;
+}
+function embedBlock(){
+  const t=TYPE[post.type];
+  if(U.isVideoFile(post.embed))
+    return `<div class="detail-media ${t.ratio}"><video src="${post.embed}" controls playsinline preload="metadata" style="width:100%;height:100%;object-fit:contain;background:#000"></video></div>`;
+  return `<div class="detail-media ${t.ratio}"><iframe src="${U.embedUrl(post.embed)}" style="width:100%;height:100%;border:0" allow="autoplay" allowfullscreen></iframe></div>`;
+}
+
+function mediaBlock(){
+  // tem link de mídia: no DESKTOP mostra embed; no CELULAR mostra botão pra abrir o Drive.
+  // (link direto .mp4 toca embutido nos dois.)
   if(post.embed){
-    return `<div class="detail-media ${t.ratio}"><iframe src="${U.embedUrl(post.embed)}" style="width:100%;height:100%;border:0" allow="autoplay" allowfullscreen></iframe></div>`;
+    if(U.isVideoFile(post.embed)) return embedBlock();
+    return `<div class="only-wide">${embedBlock()}</div><div class="only-narrow">${openDriveButton()}</div>`;
   }
-  if(post.type==="carrossel"){
-    const n=post.slides||3;
-    let slides="";
-    for(let i=0;i<n;i++) slides+=`<div class="snapcard" style="width:78%"><div class="cover grad ${post.art} ratio-4-5" style="border-radius:var(--r-lg)"><div class="art-noise"></div><div class="veil"></div><div class="cap"><span class="badge">Slide ${i+1}/${n}</span></div></div></div>`;
-    return `<div><div class="scroller" style="margin:0;padding:0 0 14px">${slides}</div></div>`;
-  }
-  return `<div class="detail-media cover grad ${post.art} ${t.ratio}">
-      <div class="art-noise"></div>
-      ${isVideo(post.type)?`<div class="play">${U.icon('play')}</div>`:''}
-      <div class="type-chip">${U.icon(t.icon)} ${t.label}</div>
-    </div>`;
+  // sem link: só mostra capa se o gestor adicionou; senão, placeholder neutro
+  if(post.cover) return coverImageBlock();
+  return neutralBlock();
 }
 
 function actionArea(){
