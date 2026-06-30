@@ -479,6 +479,16 @@ U.daysLeft = function(iso){ if(!iso) return null;
   return Math.ceil((end-now)/(1000*60*60*24));
 };
 
+/* normaliza link do Google Drive para o formato embutível (/preview) */
+U.embedUrl = function(url){
+  if(!url) return url;
+  let m = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+  if(m) return 'https://drive.google.com/file/d/'+m[1]+'/preview';
+  m = url.match(/drive\.google\.com\/open\?id=([^&]+)/) || url.match(/[?&]id=([^&]+)/);
+  if(m && /drive\.google/.test(url)) return 'https://drive.google.com/file/d/'+m[1]+'/preview';
+  return url;  // YouTube, Vimeo ou outro embed: usa como está
+};
+
 /* capa de projeto: art-X (preset) ou URL de imagem */
 U.coverAttrs = function(cover){
   cover = cover || 'art-1';

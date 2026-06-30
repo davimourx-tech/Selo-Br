@@ -52,7 +52,7 @@ function mediaBlock(){
   const t=TYPE[post.type];
   // Etapa 2: se houver embed do Drive, troca o bloco de arte por <iframe src=post.embed>
   if(post.embed){
-    return `<div class="detail-media ${t.ratio}"><iframe src="${post.embed}" style="width:100%;height:100%;border:0" allow="autoplay" allowfullscreen></iframe></div>`;
+    return `<div class="detail-media ${t.ratio}"><iframe src="${U.embedUrl(post.embed)}" style="width:100%;height:100%;border:0" allow="autoplay" allowfullscreen></iframe></div>`;
   }
   if(post.type==="carrossel"){
     const n=post.slides||3;
