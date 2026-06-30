@@ -34,23 +34,47 @@ let client, project;
 const mgr=Data.manager();
 document.getElementById("studio").textContent=mgr.studio;
 document.getElementById("brandLink").href="index.html?c="+TOKEN;
-const SEEN=new Set();
-
-function snap(post){
-  const st=STATUS.post[post.status], t=TYPE[post.type];
-  return `
-  <a class="snapcard reveal" href="post.html?c=${TOKEN}&p=${PID}&post=${post.id}" data-id="${post.id}">
-    <div class="cover grad ${post.art} ${t.ratio}">
-      <div class="art-noise"></div><div class="veil"></div>
-      <div class="type-chip">${U.icon(t.icon)} ${t.label}</div>
-      ${post.status==='pendente'?'<div class="new-chip">NOVO</div>':''}
-      <div class="cap">
-        <span class="badge ${st.cls}" style="margin-bottom:8px"><span class="pip"></span>${st.label}</span>
-        <strong style="display:block;font-size:15px;line-height:1.25">${post.title}</strong>
-        <span class="meta-sm" style="color:#cfd2da">${post.date?'Publica '+U.fmtDate(post.date):'Pauta de conteúdo'}</span>
+const DOW=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+const MONTHS=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+function postLink(id){ return `post.html?c=${TOKEN}&p=${PID}&post=${id}`; }
+function thumb(p){ return `<span class="agenda-thumb cover grad ${p.art}"><span class="art-noise"></span></span>`; }
+function dateBlock(y,m,d){ const wd=DOW[new Date(y,m-1,d).getDay()];
+  return `<div class="agenda-date"><div class="num">${String(d).padStart(2,'0')}</div><div class="mo">${MONTHS[m-1].slice(0,3)} · ${wd}</div></div>`; }
+function agendaRow(p, dateHtml){
+  const t=TYPE[p.type], st=STATUS.post[p.status];
+  return `<div class="agenda-row reveal">
+    ${dateHtml||'<div class="agenda-date"><div class="num">•</div><div class="mo">pauta</div></div>'}
+    <a class="agenda-post" href="${postLink(p.id)}">
+      ${thumb(p)}
+      <div class="grow" style="min-width:0">
+        <div class="row" style="gap:7px;margin-bottom:5px">${U.icon(t.icon)}<strong style="font-size:14px">${p.title}</strong></div>
+        <span class="badge ${st.cls}"><span class="pip"></span>${st.label}</span>
       </div>
-    </div>
-  </a>`;
+      ${U.icon('arrow')}
+    </a>
+  </div>`;
+}
+function buildView(){
+  if(!project.posts.length) return '<div class="wrap empty">Conteúdos em breve.</div>';
+  const byMonth={}, undated=[];
+  project.posts.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(p=>{
+    if(!p.date){ undated.push(p); return; }
+    const [y,m]=p.date.split('-').map(Number), key=y+'-'+m;
+    (byMonth[key]=byMonth[key]||{y,m,days:{}});
+    const day=Number(p.date.split('-')[2]);
+    (byMonth[key].days[day]=byMonth[key].days[day]||[]).push(p);
+  });
+  let rows='';
+  Object.values(byMonth).forEach(mo=>{
+    Object.keys(mo.days).map(Number).sort((a,b)=>a-b).forEach(d=>{
+      mo.days[d].forEach(p=> rows+=agendaRow(p, dateBlock(mo.y,mo.m,d)));
+    });
+  });
+  if(undated.length){
+    if(rows) rows+=`<div class="eyebrow" style="margin:20px 0 10px">Sem data definida</div>`;
+    undated.forEach(p=> rows+=agendaRow(p, null));
+  }
+  return `<div class="wrap"><div class="agenda">${rows}</div></div>`;
 }
 
 function deadlineBanner(){
@@ -91,21 +115,13 @@ function render(){
     </div>
 
     <section class="section">
-      <div class="wrap">
-        <div class="row between" style="margin-bottom:4px">
-          <div class="eyebrow" style="margin:0">${plan?'As pautas →':'Deslize para o lado →'}</div>
-          ${project.posts.length?`<a class="btn btn-sm" href="calendario.html?c=${TOKEN}&p=${PID}">${U.icon('calendar')} Ver tudo</a>`:''}
-        </div>
-      </div>
-      <div class="scroller" id="scroller">
-        ${project.posts.map(snap).join("")||'<div class="wrap empty">Conteúdos em breve.</div>'}
-      </div>
-    </section>
-    <div class="wrap"><span class="meta-sm hidden" id="seenInfo"></span><i class="hidden" id="seenBar"></i></div>`;
+      <div class="wrap"><div class="eyebrow" style="margin:0 0 14px">${plan?'Pautas por data':'Conteúdos por data'}</div></div>
+      ${buildView()}
+      <div class="wrap"><div id="endSentinel" style="height:1px"></div></div>
+    </section>`;
   U.reveal();
   setupWhats();
-  updateSeen();
-  watchSeen();
+  watchEnd();
 }
 
 function setupWhats(){
@@ -113,21 +129,13 @@ function setupWhats(){
   document.getElementById("waBtn").href=`https://wa.me/${mgr.whatsapp}?text=${encodeURIComponent(msg)}`;
 }
 
-/* marca como "visto" cada card que entra na tela; quando todos foram vistos, sobe o CTA */
-function watchSeen(){
-  const cards=document.querySelectorAll(".snapcard");
-  const io=new IntersectionObserver((es)=>{
-    es.forEach(e=>{ if(e.isIntersecting){ SEEN.add(e.target.dataset.id); updateSeen(); } });
-  },{threshold:.6});
-  cards.forEach(c=>io.observe(c));
-}
-function updateSeen(){
-  const total=project.posts.length;
-  const n=Math.min(SEEN.size,total);
-  const pct=total?Math.round(n/total*100):0;
-  const bar=document.getElementById("seenBar"); if(bar) bar.style.width=pct+"%";
-  const info=document.getElementById("seenInfo"); if(info) info.textContent=`${n} de ${total} conteúdos visualizados`;
-  document.getElementById("cta").classList.toggle("tuck", !(total>0 && n>=total));
+/* mostra o CTA do WhatsApp quando o cliente chega ao fim da lista */
+function watchEnd(){
+  const s=document.getElementById("endSentinel"); if(!s) return;
+  const io=new IntersectionObserver((es)=>{ es.forEach(e=>{
+    if(e.isIntersecting) document.getElementById("cta").classList.remove("tuck");
+  }); },{threshold:.4});
+  io.observe(s);
 }
 
 async function start(){

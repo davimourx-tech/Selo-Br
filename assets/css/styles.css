@@ -327,6 +327,14 @@ select.select-bare{-webkit-appearance:none;appearance:none;background-image:none
 .kv:last-child{border-bottom:none}
 .kv .k{color:var(--text-3);font-size:13.5px}
 
+/* post detail responsivo: empilha no celular (mídia em cima) */
+.post-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);align-items:start;gap:26px}
+.post-media{position:sticky;top:84px}
+@media (max-width:760px){
+  .post-grid{grid-template-columns:1fr;gap:18px}
+  .post-media{position:static;top:auto}
+}
+
 /* segmented status control */
 .seg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .seg button{padding:11px;border-radius:var(--r-sm);background:var(--bg-2);border:1px solid var(--line);
